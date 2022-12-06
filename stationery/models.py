@@ -21,6 +21,10 @@ class Product(models.Model):
     def __str__(self):
         return f'{self.description} - {self.code }'
 
+    class Meta:
+        verbose_name = 'Produto'
+        verbose_name_plural = 'Produtos'
+
 
 # Customers model
 class Customer(models.Model):
@@ -30,6 +34,10 @@ class Customer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = 'Cliente'
+        verbose_name_plural = 'Clientes'
+
 
 # Customers model
 class Seller(models.Model):
@@ -38,6 +46,10 @@ class Seller(models.Model):
     telefone = models.IntegerField('Telefone')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Vendedor'
+        verbose_name_plural = 'Vendedores'
 
 
 # Sales model
@@ -55,6 +67,10 @@ class Sale(models.Model):
     def __str__(self):
         return f'{self.invoice} - {self.sale_datetime} - {self.customer} - {self.seller}'
 
+    class Meta:
+        verbose_name = 'Venda'
+        verbose_name_plural = 'Vendas'
+
 
 # Sale itens model
 class Item(models.Model):
@@ -70,6 +86,10 @@ class Item(models.Model):
     @property
     def total_price(self):
         return self.sale * self.product.price
+
+    class Meta:
+        verbose_name = 'Item da Venda'
+        verbose_name_plural = 'Itens da(s) Venda(s)'
 
 
 # Default weekdays commission
@@ -97,7 +117,11 @@ class DefaultComission(models.Model):
             raise ValidationError({'min_comission': _(
                 'Comissão mínima não pode ser maior que comissão máxima do dia.')})
 
-    # Forces clean() method on Model.save()
+    # Forces clean() method on save()
     def save(self, **kwargs):
         self.clean()
         return super(DefaultComission, self).save(**kwargs)
+
+    class Meta:
+        verbose_name = 'Comissão Padrão'
+        verbose_name_plural = 'Comissões Padrões'
