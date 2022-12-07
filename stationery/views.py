@@ -1,8 +1,8 @@
 from django.shortcuts import render
 from django.db.models import Q
-from .serializers import ProductSerializer, CustomerSerializer, SellerSerializer
+from .serializers import ProductSerializer, CustomerSerializer, SellerSerializer, SaleSerializer
 from rest_framework import viewsets
-from .models import Product, Customer, Seller
+from .models import Product, Customer, Seller, Sale
 from functools import reduce
 
 
@@ -30,3 +30,9 @@ class SellerViewSet(viewsets.ModelViewSet):
 
     queryset = Seller.objects.all()
     serializer_class = SellerSerializer
+
+
+class SaleViewSet(viewsets.ModelViewSet):
+
+    queryset = Sale.objects.all().prefetch_related('itemsale_set__product')
+    serializer_class = SaleSerializer

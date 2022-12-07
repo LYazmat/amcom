@@ -34,6 +34,9 @@ class Customer(models.Model):
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
+    def __str__(self):
+        return f'{self.name}'
+
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
@@ -47,9 +50,69 @@ class Seller(models.Model):
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
+    def __str__(self):
+        return f'{self.name}'
+
     class Meta:
         verbose_name = 'Vendedor'
         verbose_name_plural = 'Vendedores'
+
+
+# Default weekdays commission - isoformat
+# 1 - Monday to 7 - Sunday
+class DefaultCommission(models.Model):
+
+    def range_commision(value):
+        if not (Decimal('0.00') <= value <= Decimal('10.00')):
+            raise ValidationError(f'A comissão deve ser entre 0,00 e 10,00.')
+
+    MONDAY = 1
+    TUESDAY = 2
+    WEDNESDAY = 3
+    THURSDAY = 4
+    FRIDAY = 5
+    SATURDAY = 6
+    SUNDAY = 7
+
+    ISOWEEKDAYS_CHOICES = [
+        (MONDAY, 'Segunda-Feira'),
+        (TUESDAY, 'Terça-Feira'),
+        (WEDNESDAY, 'Quarta-Feira'),
+        (THURSDAY, 'Quinta-Feira'),
+        (FRIDAY, 'Sexta-Feira'),
+        (SATURDAY, 'Sábado'),
+        (SUNDAY, 'Domingo'),
+    ]
+
+    day = models.IntegerField(
+        'Dia da semana', primary_key=True, choices=ISOWEEKDAYS_CHOICES)
+    min_commission = models.DecimalField(
+        'Comissão mínima', decimal_places=2, max_digits=4, default=Decimal('0.00'), validators=[range_commision])
+    max_commission = models.DecimalField(
+        'Comissão máxima', decimal_places=2, max_digits=4, default=Decimal('10.00'), validators=[range_commision])
+    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
+    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
+
+    def __str__(self) -> str:
+        return f'{self.get_day_display()}: {self.min_commission}% - {self.max_commission}%'
+
+    # Overriding clean() and save() methods
+    # max_commission must be bigegr or equal than min_commission
+    def clean(self):
+        super(DefaultCommission, self).clean()
+        if self.min_commission > self.max_commission:
+            raise ValidationError({'min_commission': _(
+                'Comissão mínima não pode ser maior que comissão máxima do dia.')})
+
+    # Forces clean() method on save()
+    def save(self, **kwargs):
+        self.clean()
+        return super(DefaultCommission, self).save(**kwargs)
+
+    class Meta:
+        verbose_name = 'Comissão Padrão'
+        verbose_name_plural = 'Comissões Padrões'
+        ordering = ['day']
 
 
 # Sales model
@@ -61,7 +124,7 @@ class Sale(models.Model):
     customer = models.ForeignKey(to=Customer, on_delete=models.PROTECT)
     seller = models.ForeignKey(to=Seller, on_delete=models.PROTECT)
     items = models.ManyToManyField(
-        to=Product, through='Item', related_name='sales')
+        to=Product, through='ItemSale', related_name='sales')
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
@@ -74,7 +137,7 @@ class Sale(models.Model):
 
 
 # Sale itens model
-class Item(models.Model):
+class ItemSale(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE)
     amount = models.IntegerField('Quantidade')
@@ -91,58 +154,3 @@ class Item(models.Model):
     class Meta:
         verbose_name = 'Item da Venda'
         verbose_name_plural = 'Itens da(s) Venda(s)'
-
-
-# Default weekdays commission - isoformat
-# 1 - Monday to 7 - Sunday
-class DefaultComission(models.Model):
-
-    def named_weekday(weekday: int):
-        return datetime(1, 1, weekday + 1).strftime('%A')
-
-    MONDAY = 1
-    TUESDAY = 2
-    WEDNESDAY = 3
-    THURSDAY = 4
-    FRIDAY = 5
-    SATURDAY = 6
-    SUNDAY = 7
-
-    WEEKDAYS_CHOICES = [
-        (MONDAY, 'Segunda-Feira'),
-        (TUESDAY, 'Terça-Feira'),
-        (WEDNESDAY, 'Quarta-Feira'),
-        (THURSDAY, 'Quinta-Feira'),
-        (FRIDAY, 'Sexta-Feira'),
-        (SATURDAY, 'Sábado'),
-        (SUNDAY, 'Domingo'),
-    ]
-
-    day = models.IntegerField(
-        'Dia da semana', primary_key=True, choices=WEEKDAYS_CHOICES)
-    min_comission = models.DecimalField(
-        'Comissão mínima', decimal_places=2, max_digits=4)
-    max_comission = models.DecimalField(
-        'Comissão máxima', decimal_places=2, max_digits=4)
-    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
-    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
-
-    def __str__(self) -> str:
-        return f'{self.get_day_display()}: {self.min_comission}% - {self.max_comission}%'
-
-    # Overriding clean() and save() methods
-    # max_commission must be bigegr or equal than min_commission
-    def clean(self):
-        super(DefaultComission, self).clean()
-        if self.min_comission > self.max_comission:
-            raise ValidationError({'min_commission': _(
-                'Comissão mínima não pode ser maior que comissão máxima do dia.')})
-
-    # Forces clean() method on save()
-    def save(self, **kwargs):
-        self.clean()
-        return super(DefaultComission, self).save(**kwargs)
-
-    class Meta:
-        verbose_name = 'Comissão Padrão'
-        verbose_name_plural = 'Comissões Padrões'
