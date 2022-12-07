@@ -15,8 +15,8 @@ class Product(models.Model):
         'Valor Unitário', decimal_places=2, max_digits=30)
     commission = models.DecimalField('Percentual de comissão', decimal_places=2, max_digits=4,
                                      validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('10.00'))])
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
+    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
     def __str__(self):
         return f'{self.description} - {self.code }'
@@ -30,9 +30,9 @@ class Product(models.Model):
 class Customer(models.Model):
     name = models.CharField('Nome', max_length=150)
     email = models.EmailField('E-mail', max_length=100)
-    telefone = models.IntegerField('Telefone')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    phone_number = models.IntegerField('Telefone')
+    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
+    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
     class Meta:
         verbose_name = 'Cliente'
@@ -43,9 +43,9 @@ class Customer(models.Model):
 class Seller(models.Model):
     name = models.CharField('Nome', max_length=150)
     email = models.EmailField('E-mail', max_length=100)
-    telefone = models.IntegerField('Telefone')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    phone_number = models.IntegerField('Telefone')
+    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
+    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
     class Meta:
         verbose_name = 'Vendedor'
@@ -60,9 +60,10 @@ class Sale(models.Model):
         'Data e Hora da Venda', default=datetime.today())
     customer = models.ForeignKey(to=Customer, on_delete=models.PROTECT)
     seller = models.ForeignKey(to=Seller, on_delete=models.PROTECT)
-    items = models.ManyToManyField(to=Product, through='Item')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    items = models.ManyToManyField(
+        to=Product, through='Item', related_name='sales')
+    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
+    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
     def __str__(self):
         return f'{self.invoice} - {self.sale_datetime} - {self.customer} - {self.seller}'
@@ -77,8 +78,8 @@ class Item(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE)
     amount = models.IntegerField('Quantidade')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
+    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
     def __str__(self) -> str:
         return f'{self.product} - {self.sale}'
@@ -92,29 +93,49 @@ class Item(models.Model):
         verbose_name_plural = 'Itens da(s) Venda(s)'
 
 
-# Default weekdays commission
-# 0 - Monday to 6 - Sunday
+# Default weekdays commission - isoformat
+# 1 - Monday to 7 - Sunday
 class DefaultComission(models.Model):
-    day = models.IntegerField(primary_key=True,
-                              validators=[MinValueValidator(0), MaxValueValidator(Decimal(6))])
-    name = models.CharField('Dia da Semana', max_length=20)
+
+    def named_weekday(weekday: int):
+        return datetime(1, 1, weekday + 1).strftime('%A')
+
+    MONDAY = 1
+    TUESDAY = 2
+    WEDNESDAY = 3
+    THURSDAY = 4
+    FRIDAY = 5
+    SATURDAY = 6
+    SUNDAY = 7
+
+    WEEKDAYS_CHOICES = [
+        (MONDAY, 'Segunda-Feira'),
+        (TUESDAY, 'Terça-Feira'),
+        (WEDNESDAY, 'Quarta-Feira'),
+        (THURSDAY, 'Quinta-Feira'),
+        (FRIDAY, 'Sexta-Feira'),
+        (SATURDAY, 'Sábado'),
+        (SUNDAY, 'Domingo'),
+    ]
+
+    day = models.IntegerField(
+        'Dia da semana', primary_key=True, choices=WEEKDAYS_CHOICES)
     min_comission = models.DecimalField(
         'Comissão mínima', decimal_places=2, max_digits=4)
     max_comission = models.DecimalField(
         'Comissão máxima', decimal_places=2, max_digits=4)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
+    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
     def __str__(self) -> str:
-        return f'{self.name}: {self.min_comission}% - {self.max_comission}%'
+        return f'{self.get_day_display()}: {self.min_comission}% - {self.max_comission}%'
 
     # Overriding clean() and save() methods
     # max_commission must be bigegr or equal than min_commission
-
     def clean(self):
         super(DefaultComission, self).clean()
         if self.min_comission > self.max_comission:
-            raise ValidationError({'min_comission': _(
+            raise ValidationError({'min_commission': _(
                 'Comissão mínima não pode ser maior que comissão máxima do dia.')})
 
     # Forces clean() method on save()
