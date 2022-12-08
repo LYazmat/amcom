@@ -120,7 +120,7 @@ class DefaultCommission(models.Model):
 class Sale(models.Model):
     invoice = models.CharField('Nota Fiscal', max_length=100)
     sale_datetime = models.DateTimeField(
-        'Data e Hora da Venda', default=datetime.today())
+        'Data e Hora da Venda', default=datetime.today)
     customer = models.ForeignKey(to=Customer, on_delete=models.PROTECT)
     seller = models.ForeignKey(to=Seller, on_delete=models.PROTECT)
     items = models.ManyToManyField(

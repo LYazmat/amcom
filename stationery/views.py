@@ -34,5 +34,6 @@ class SellerViewSet(viewsets.ModelViewSet):
 
 class SaleViewSet(viewsets.ModelViewSet):
 
-    queryset = Sale.objects.all().prefetch_related('itemsale_set__product')
+    queryset = Sale.objects.all().prefetch_related(
+        'itemsale_set__product', 'seller', 'customer')
     serializer_class = SaleSerializer
