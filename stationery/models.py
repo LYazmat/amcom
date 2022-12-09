@@ -1,20 +1,26 @@
 from django.db import models
 from decimal import Decimal
 from datetime import datetime
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 
+# Method to validate comission range
+def validator_range_commission(value):
+    if not (Decimal('0.00') <= value <= Decimal('10.00')):
+        raise ValidationError(f'A comissão deve ser entre 0,00 e 10,00.')
+
+
 # Products model
-# commission range 0-10
 class Product(models.Model):
     code = models.CharField('Código', max_length=30)
     description = models.CharField('Descrição', max_length=150)
     price = models.DecimalField(
         'Valor Unitário', decimal_places=2, max_digits=30)
+    # Commission range 0|-|10
     commission = models.DecimalField('Percentual de comissão', decimal_places=2, max_digits=4,
-                                     validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('10.00'))])
+                                     validators=[validator_range_commission])
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
@@ -26,8 +32,9 @@ class Product(models.Model):
         verbose_name_plural = 'Produtos'
 
 
-# Customers model
-class Customer(models.Model):
+# Customer and Seller models have same fields
+# thus, using Person model as Abstract model for both
+class Person(models.Model):
     name = models.CharField('Nome', max_length=150)
     email = models.EmailField('E-mail', max_length=100)
     phone_number = models.IntegerField('Telefone')
@@ -36,35 +43,32 @@ class Customer(models.Model):
 
     def __str__(self):
         return f'{self.name}'
+
+    class Meta:
+        abstract = True
+
+
+# Customers model
+class Customer(Person):
 
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
 
 
-# Customers model
-class Seller(models.Model):
-    name = models.CharField('Nome', max_length=150)
-    email = models.EmailField('E-mail', max_length=100)
-    phone_number = models.IntegerField('Telefone')
-    created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
-    updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
-
-    def __str__(self):
-        return f'{self.name}'
+# Seller model
+class Seller(Person):
 
     class Meta:
         verbose_name = 'Vendedor'
         verbose_name_plural = 'Vendedores'
 
 
-# Default weekdays commission - isoformat
-# 1 - Monday to 7 - Sunday
+# Default weekdays commission model
 class DefaultCommission(models.Model):
 
-    def range_commision(value):
-        if not (Decimal('0.00') <= value <= Decimal('10.00')):
-            raise ValidationError(f'A comissão deve ser entre 0,00 e 10,00.')
+    # Isoformat weekday:
+    # 1 - Monday to 7 - Sunday
 
     MONDAY = 1
     TUESDAY = 2
@@ -86,18 +90,20 @@ class DefaultCommission(models.Model):
 
     day = models.IntegerField(
         'Dia da semana', primary_key=True, choices=ISOWEEKDAYS_CHOICES)
+
+    # Commission range 0|-|10 for min and max values
     min_commission = models.DecimalField(
-        'Comissão mínima', decimal_places=2, max_digits=4, default=Decimal('0.00'), validators=[range_commision])
+        'Comissão mínima', decimal_places=2, max_digits=4, default=Decimal('0.00'), validators=[validator_range_commission])
     max_commission = models.DecimalField(
-        'Comissão máxima', decimal_places=2, max_digits=4, default=Decimal('10.00'), validators=[range_commision])
+        'Comissão máxima', decimal_places=2, max_digits=4, default=Decimal('10.00'), validators=[validator_range_commission])
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
     def __str__(self) -> str:
         return f'{self.get_day_display()}: {self.min_commission}% - {self.max_commission}%'
 
-    # Overriding clean() and save() methods
-    # max_commission must be bigegr or equal than min_commission
+    # Overrides clean() and save() methods
+    # max_commission must be bigger or equal than min_commission
     def clean(self):
         super(DefaultCommission, self).clean()
         if self.min_commission > self.max_commission:
@@ -116,15 +122,17 @@ class DefaultCommission(models.Model):
 
 
 # Sales model
-# items = products list, n-n relationship throught model Item
 class Sale(models.Model):
     invoice = models.CharField('Nota Fiscal', max_length=100)
     sale_datetime = models.DateTimeField(
         'Data e Hora da Venda', default=datetime.today)
     customer = models.ForeignKey(to=Customer, on_delete=models.PROTECT)
     seller = models.ForeignKey(to=Seller, on_delete=models.PROTECT)
+
+    # items = products list, n-n relationship throught model Item
     items = models.ManyToManyField(
         to=Product, through='ItemSale', related_name='sales')
+
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
@@ -140,7 +148,8 @@ class Sale(models.Model):
 class ItemSale(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE)
-    amount = models.IntegerField('Quantidade')
+    amount = models.IntegerField(
+        'Quantidade', validators=[MinValueValidator(1)])
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
@@ -153,4 +162,4 @@ class ItemSale(models.Model):
 
     class Meta:
         verbose_name = 'Item da Venda'
-        verbose_name_plural = 'Itens da(s) Venda(s)'
+        verbose_name_plural = 'Itens de Vendas'

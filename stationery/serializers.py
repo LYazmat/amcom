@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Product, Customer, Seller, Sale, ItemSale
+from .custom_mixins import CUDNestedMixin
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -23,39 +24,74 @@ class SellerSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ItemSaleSerializer(serializers.ModelSerializer):
+class ReadItemSaleSerializer(serializers.ModelSerializer):
 
-    product_detail = ProductSerializer(read_only=True, source='product')
-    sale = serializers.PrimaryKeyRelatedField(required=False, read_only=True)
+    product = ProductSerializer(read_only=True)
+
+    class Meta:
+        model = ItemSale
+        exclude = ['sale']
+
+
+class ReadSaleSerializer(serializers.ModelSerializer):
+
+    items = ReadItemSaleSerializer(many=True, source='itemsale_set')
+    seller = SellerSerializer(read_only=True)
+    customer = CustomerSerializer(read_only=True)
+
+    class Meta:
+        model = Sale
+        fields = '__all__'
+
+
+class WriteItemSaleSerializer(serializers.ModelSerializer):
+
     id = serializers.IntegerField(required=False)
+    sale = serializers.PrimaryKeyRelatedField(
+        required=False, queryset=Sale.objects.all())
 
     class Meta:
         model = ItemSale
         fields = '__all__'
 
 
-class SaleSerializer(serializers.ModelSerializer):
+class WriteSaleSerializer(serializers.ModelSerializer, CUDNestedMixin):
 
-    items = ItemSaleSerializer(many=True, source='itemsale_set')
-    seller_detail = SellerSerializer(read_only=True, source='seller')
-    customer_detail = CustomerSerializer(read_only=True, source='customer')
+    items = WriteItemSaleSerializer(many=True, source='itemsale_set')
 
     class Meta:
         model = Sale
         fields = '__all__'
 
     def create(self, validated_data):
+
+        if 'itemsale_set' in validated_data:
+            items_data = self.initial_data['items']
+            validated_data.pop('itemsale_set')
+
+        sale = Sale.objects.create(**validated_data)
+
+        self.cud_nested(
+            queryset=sale.itemsale_set.all(),
+            data=items_data,
+            serializer=WriteItemSaleSerializer,
+            context=self.context,
+            related={'sale': sale.id}
+        )
+
+        '''
         items_data = []
         if 'itemsale_set' in validated_data:
             items_data = validated_data.pop('itemsale_set')
-        sale = Sale.objects.create(**validated_data)
+
         for item_data in items_data:
             ItemSale.objects.create(sale=sale, **item_data)
+        '''
+
         return sale
 
     def update(self, instance, validated_data):
 
-        items = validated_data.pop('itemsale_set', None)
         instance.invoice = validated_data.get('invoice', instance.invoice)
         instance.sale_datetime = validated_data.get(
             'sale_datetime', instance.invoice)
@@ -63,21 +99,13 @@ class SaleSerializer(serializers.ModelSerializer):
         instance.customer = validated_data.get('customer', instance.customer)
         instance.save()
 
-        items_id = []
-        if items is not None:
-            for item in items:
-                item_sale = ItemSale.objects.filter(id=item.get('id')).first()
-                if item_sale:
-                    item_sale.amount = item.get('amount', item_sale.amount)
-                    item_sale.product = item.get('product', item_sale.product)
-                    item_sale.save()
-                else:
-                    item_sale = ItemSale.objects.create(sale=instance, amount=item.get(
-                        'amount', 0), product=item.get('product', None))
-
-                items_id.append(item_sale.id)
-            ItemSale.objects.filter(sale=instance).exclude(
-                id__in=items_id).delete()
+        self.cud_nested(
+            queryset=instance.itemsale_set.all(),
+            data=self.initial_data["items"],
+            serializer=WriteItemSaleSerializer,
+            context=self.context,
+            related={'sale': instance.id}
+        )
 
         return instance
 
