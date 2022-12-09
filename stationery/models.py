@@ -158,7 +158,7 @@ class ItemSale(models.Model):
 
     @property
     def total_price(self):
-        return self.sale * self.product.price
+        return self.amount * self.product.price
 
     class Meta:
         verbose_name = 'Item da Venda'

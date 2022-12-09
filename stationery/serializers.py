@@ -79,15 +79,6 @@ class WriteSaleSerializer(serializers.ModelSerializer, CUDNestedMixin):
             related={'sale': sale.id}
         )
 
-        '''
-        items_data = []
-        if 'itemsale_set' in validated_data:
-            items_data = validated_data.pop('itemsale_set')
-
-        for item_data in items_data:
-            ItemSale.objects.create(sale=sale, **item_data)
-        '''
-
         return sale
 
     def update(self, instance, validated_data):
@@ -122,3 +113,10 @@ class WriteSaleSerializer(serializers.ModelSerializer, CUDNestedMixin):
                     'items': [f'Espera-se uma lista, recebido tipo {type(data.get("items")).__name__}']
                 })
         return super().to_internal_value(data)
+
+
+class SellerCommissionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Seller
+        fields = ['id', 'name']

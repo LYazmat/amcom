@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.db.models import Q
-from .serializers import ProductSerializer, CustomerSerializer, SellerSerializer, ReadSaleSerializer, WriteSaleSerializer
+from .serializers import ProductSerializer, CustomerSerializer, SellerSerializer, ReadSaleSerializer, WriteSaleSerializer, SellerCommissionSerializer
 from rest_framework import viewsets
 from .models import Product, Customer, Seller, Sale
 from functools import reduce
@@ -36,8 +36,17 @@ class SaleViewSet(viewsets.ModelViewSet):
 
     queryset = Sale.objects.all().prefetch_related(
         'itemsale_set__product', 'seller', 'customer')
+    http_method_names = ['get', 'post', 'put', 'delete']
 
     def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ['create', 'update', 'destroy']:
             return WriteSaleSerializer
         return ReadSaleSerializer
+
+
+class SellerCommissionViewSet(viewsets.ModelViewSet):
+
+    queryset = Seller.objects.all().prefetch_related(
+        'sale_set__itemsale_set__product')
+    http_method_names = ['get']
+    serializer_class = SellerCommissionSerializer
