@@ -6,21 +6,24 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 
-# Method to validate comission range
 def validator_range_commission(value):
+    # Method to validate comission range 0|-|10
+
     if not (Decimal('0.00') <= value <= Decimal('10.00')):
         raise ValidationError(f'A comissão deve ser entre 0,00 e 10,00.')
 
 
-# Products model
 class Product(models.Model):
+    # Products model
+
     code = models.CharField('Código', max_length=30)
     description = models.CharField('Descrição', max_length=150)
     price = models.DecimalField(
         'Valor Unitário', decimal_places=2, max_digits=30)
-    # Commission range 0|-|10
+
     commission = models.DecimalField('Percentual de comissão', decimal_places=2, max_digits=4,
                                      validators=[validator_range_commission])
+
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
@@ -32,9 +35,10 @@ class Product(models.Model):
         verbose_name_plural = 'Produtos'
 
 
-# Customer and Seller models have same fields
-# thus, using Person model as Abstract model for both
 class Person(models.Model):
+    # Customer and Seller models have same fields
+    # thus, using Person model as Abstract model for both
+
     name = models.CharField('Nome', max_length=150)
     email = models.EmailField('E-mail', max_length=100)
     phone_number = models.IntegerField('Telefone')
@@ -48,27 +52,23 @@ class Person(models.Model):
         abstract = True
 
 
-# Customers model
 class Customer(Person):
-
+    # Customers model
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
 
 
-# Seller model
 class Seller(Person):
-
+    # Sellers model
     class Meta:
         verbose_name = 'Vendedor'
         verbose_name_plural = 'Vendedores'
 
 
-# Default weekdays commission model
 class DefaultCommission(models.Model):
-
-    # Isoformat weekday:
-    # 1 - Monday to 7 - Sunday
+    # Default weekdays commission model
+    # Isoformat weekday: 1 - Monday to 7 - Sunday
 
     MONDAY = 1
     TUESDAY = 2
@@ -96,6 +96,7 @@ class DefaultCommission(models.Model):
         'Comissão mínima', decimal_places=2, max_digits=4, default=Decimal('0.00'), validators=[validator_range_commission])
     max_commission = models.DecimalField(
         'Comissão máxima', decimal_places=2, max_digits=4, default=Decimal('10.00'), validators=[validator_range_commission])
+
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
@@ -121,8 +122,9 @@ class DefaultCommission(models.Model):
         ordering = ['day']
 
 
-# Sales model
 class Sale(models.Model):
+    # Sales model
+
     invoice = models.CharField('Nota Fiscal', max_length=100)
     sale_datetime = models.DateTimeField(
         'Data e Hora da Venda', default=datetime.today)
@@ -144,8 +146,9 @@ class Sale(models.Model):
         verbose_name_plural = 'Vendas'
 
 
-# Sale itens model
 class ItemSale(models.Model):
+    # Sale itens model
+
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE)
     amount = models.IntegerField(

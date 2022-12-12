@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from .models import Product, Customer, Seller, Sale, ItemSale
+from .models import Product, Customer, Seller, Sale, ItemSale, DefaultCommission
+from django.db.models import Count
 from .custom_mixins import CUDNestedMixin
+from decimal import Decimal
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -117,6 +119,46 @@ class WriteSaleSerializer(serializers.ModelSerializer, CUDNestedMixin):
 
 class SellerCommissionSerializer(serializers.ModelSerializer):
 
+    count = serializers.SerializerMethodField('count_sales')
+    commission = serializers.SerializerMethodField('commission_sales')
+
     class Meta:
         model = Seller
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'count', 'commission']
+
+    def __init__(self, *args, **kwargs):
+        super(SellerCommissionSerializer, self).__init__(*args, **kwargs)
+
+        self.weekcommision = {
+            df.day: {'min': df.min_commission,
+                     'max': df.max_commission}
+            for df in list(DefaultCommission.objects.all())
+        }
+
+    def count_sales(self, seller):
+        return seller.sale_set.count()
+
+    def check_comission(self, isoweekday: int, item: ItemSale):
+
+        empty_comission = {
+            'min': Decimal('0.00'),
+            'max': Decimal('10.00')
+        }
+
+        daycommission = self.weekcommision.get(isoweekday, empty_comission)
+        applied_commission = min(daycommission.get('max'), max(
+            daycommission.get('min'), item.product.commission))
+        return applied_commission
+
+    def commission_sales(self, seller):
+        sales = seller.sale_set.all()
+
+        commissions_sale = []
+        for sale in sales:
+            isodayweek = sale.sale_datetime.isoweekday()
+            itemsales = sale.itemsale_set.all()
+            for item in itemsales:
+                applied_commission = self.check_comission(isodayweek, item)
+                commissions_sale.append(
+                    item.total_price * applied_commission / 100)
+        return sum(commissions_sale)

@@ -5,9 +5,13 @@ from rest_framework.serializers import Serializer
 
 class CUDNestedMixin(object):
     '''
-    Create-Update-Delete Mixin for NestedSerializers
-    When update_partial and items data was not given, keeps items from nested parent.
-    A empty list [] will remove all items by default.
+    Create-Update[PUT]-Delete Mixin for NestedSerializers
+    Keep in mind that partial updates [PATCH] will treats each nested object apart
+    When using this mixin, that means it will commit updates and deletes on
+    existing objects even when a new object raises an excepetion when creating
+    Thus, you may want deny patch / update partial from view
+
+    A empty list [] will remove all items by default
     '''
     @staticmethod
     def cud_nested(
