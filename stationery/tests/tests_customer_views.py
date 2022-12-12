@@ -1,34 +1,34 @@
 from rest_framework.test import APITestCase, APIClient
 from django.urls import reverse
 from rest_framework import status
-from ..models import Seller
+from ..models import Customer
 
 
-class TestViewSeller(APITestCase):
+class TestViewCustomer(APITestCase):
 
     def setUp(self):
         self.client = APIClient()
 
-        Seller.objects.create(
+        Customer.objects.create(
             name='Marcus',
             email='marcus@teste.com',
             phone_number=24999454545
         )
 
-    def test_seller_list_GET(self):
+    def test_customer_list_GET(self):
         '''
         Check 
         - Status code for list GET (list)
         - Length data response test, it should be 1
         '''
 
-        url = reverse('seller-list')
+        url = reverse('customer-list')
         response = self.client.get(url)
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(len(response.data), 1)
 
-    def test_seller_create_POST(self):
+    def test_customer_create_POST(self):
         '''
         Check 
         - Status code for list POST (create)
@@ -36,7 +36,7 @@ class TestViewSeller(APITestCase):
         - Name from object create (id=2) and data sent
         '''
 
-        url = reverse('seller-list')
+        url = reverse('customer-list')
         data = {
             'name': 'Lucas',
             'email': 'lucas@teste.com',
@@ -45,10 +45,10 @@ class TestViewSeller(APITestCase):
         response = self.client.post(url, data)
 
         self.assertEquals(response.status_code, status.HTTP_201_CREATED)
-        self.assertEquals(Seller.objects.count(), 2)
-        self.assertEquals(Seller.objects.get(id=2).name, data['name'])
+        self.assertEquals(Customer.objects.count(), 2)
+        self.assertEquals(Customer.objects.get(id=2).name, data['name'])
 
-    def test_seller_retrieve_GET(self):
+    def test_customer_retrieve_GET(self):
         '''
         Check 
         - Status code for detail GET (retrieve)
@@ -56,7 +56,7 @@ class TestViewSeller(APITestCase):
         - If name is Marcus
         '''
 
-        url = reverse('seller-detail', args=[1])
+        url = reverse('customer-detail', args=[1])
         response = self.client.get(url)
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
@@ -65,14 +65,14 @@ class TestViewSeller(APITestCase):
         self.assertIsNotNone(response.data.get('phone_number'))
         self.assertEquals(response.data.get('name'), 'Marcus')
 
-    def test_seller_update_PUT(self):
+    def test_customer_update_PUT(self):
         '''
         Check 
         - Status code for detail PUT (update)
         - If name change      
         '''
 
-        url = reverse('seller-detail', args=[1])
+        url = reverse('customer-detail', args=[1])
         data = {
             'name': 'Marcus PUT',
             'email': 'marcus@teste.com',
@@ -82,34 +82,34 @@ class TestViewSeller(APITestCase):
         response = self.client.put(url, data)
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(Seller.objects.get(id=1).name, data['name'])
+        self.assertEquals(Customer.objects.get(id=1).name, data['name'])
 
-    def test_seller_partial_update_PATCH(self):
+    def test_customer_partial_update_PATCH(self):
         '''
         Check
         - Status code for detail PATCH (partial update)
         - If name changed   
         '''
 
-        url = reverse('seller-detail', args=[1])
+        url = reverse('customer-detail', args=[1])
         data = {
-            'name': 'Marcus PUT'
+            'name': 'Marcus PATCH'
         }
 
         response = self.client.patch(url, data)
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(Seller.objects.get(id=1).name, data['name'])
+        self.assertEquals(Customer.objects.get(id=1).name, data['name'])
 
-    def test_seller_destroy_PATCH(self):
+    def test_customer_destroy_PATCH(self):
         '''
         Check
         - Status code for detail DELETE (destroy)
         - If object id=1 exists  
         '''
 
-        url = reverse('seller-detail', args=[1])
+        url = reverse('customer-detail', args=[1])
         response = self.client.delete(url)
 
         self.assertEquals(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertFalse(Seller.objects.filter(id=1).exists())
+        self.assertFalse(Customer.objects.filter(id=1).exists())
