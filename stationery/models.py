@@ -131,7 +131,7 @@ class Sale(models.Model):
     customer = models.ForeignKey(to=Customer, on_delete=models.PROTECT)
     seller = models.ForeignKey(to=Seller, on_delete=models.PROTECT)
 
-    # items = products list, n-n relationship throught model Item
+    # items = products list, n-n relationship throught model ItemSale
     items = models.ManyToManyField(
         to=Product, through='ItemSale', related_name='sales')
 
@@ -151,8 +151,11 @@ class ItemSale(models.Model):
 
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     sale = models.ForeignKey(Sale, on_delete=models.CASCADE)
+
+    # Minimum amount = 1
     amount = models.IntegerField(
         'Quantidade', validators=[MinValueValidator(1)])
+
     created_at = models.DateTimeField('Criado em (UTC)', auto_now_add=True)
     updated_at = models.DateTimeField('Alterado em (UTC)', auto_now=True)
 
