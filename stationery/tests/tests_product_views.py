@@ -34,7 +34,7 @@ class TestViewProduct(APITestCase):
         '''
         Check 
         - Status code for list POST (create)
-        - Length data response test, it should be 1
+        - Length data response test, it should be 2
         - Description from object create (id=2) and data sent
         '''
 
@@ -45,7 +45,7 @@ class TestViewProduct(APITestCase):
             'price': '47.25',
             'commission': '2.27',
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
 
         self.assertEquals(response.status_code, status.HTTP_201_CREATED)
         self.assertEquals(Product.objects.count(), 2)
@@ -85,7 +85,7 @@ class TestViewProduct(APITestCase):
             'commission': '2.27',
         }
 
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(Product.objects.get(
@@ -103,7 +103,7 @@ class TestViewProduct(APITestCase):
             'description': 'Product 1 PATCH',
         }
 
-        response = self.client.patch(url, data)
+        response = self.client.patch(url, data, format='json')
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(Product.objects.get(

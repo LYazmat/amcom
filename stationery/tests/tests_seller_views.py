@@ -32,7 +32,7 @@ class TestViewSeller(APITestCase):
         '''
         Check 
         - Status code for list POST (create)
-        - Length data response test, it should be 1
+        - Length objects, it should be 2
         - Name from object create (id=2) and data sent
         '''
 
@@ -42,7 +42,7 @@ class TestViewSeller(APITestCase):
             'email': 'lucas@teste.com',
             'phone_number': 24999505050
         }
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
 
         self.assertEquals(response.status_code, status.HTTP_201_CREATED)
         self.assertEquals(Seller.objects.count(), 2)
@@ -79,7 +79,7 @@ class TestViewSeller(APITestCase):
             'phone_number': 24999454545
         }
 
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(Seller.objects.get(id=1).name, data['name'])
@@ -96,7 +96,7 @@ class TestViewSeller(APITestCase):
             'name': 'Marcus PUT'
         }
 
-        response = self.client.patch(url, data)
+        response = self.client.patch(url, data, format='json')
 
         self.assertEquals(response.status_code, status.HTTP_200_OK)
         self.assertEquals(Seller.objects.get(id=1).name, data['name'])
